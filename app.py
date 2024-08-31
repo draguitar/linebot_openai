@@ -1,4 +1,5 @@
 from flask import Flask, request, abort
+from openai import OpenAI
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -25,14 +26,26 @@ handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 # OPENAI API Key初始化設定
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
+client = OpenAI(
+    api_key=api_key,
+    base_url=api_base_url,
+)
+
 
 def GPT_response(text):
-    # 接收回應
-    response = openai.Completion.create(model="gpt-3.5-turbo-instruct", prompt=text, temperature=0.5, max_tokens=500)
-    print(response)
-    # 重組回應
-    answer = response['choices'][0]['text'].replace('。','')
-    return answer
+    completion = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "user", "content": text}
+        ],
+        temperature=0.5,
+        max_tokens=200
+    )
+
+    message = completion.choices[0].message.content
+    return message
+
+
 
 
 # 監聽所有來自 /callback 的 Post Request
@@ -62,7 +75,7 @@ def handle_message(event):
     except:
         print(traceback.format_exc())
         line_bot_api.reply_message(event.reply_token, TextSendMessage('你所使用的OPENAI API key額度可能已經超過，請於後台Log內確認錯誤訊息'))
-        
+
 
 @handler.add(PostbackEvent)
 def handle_message(event):
@@ -77,8 +90,8 @@ def welcome(event):
     name = profile.display_name
     message = TextSendMessage(text=f'{name}歡迎加入')
     line_bot_api.reply_message(event.reply_token, message)
-        
-        
+
+
 import os
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
