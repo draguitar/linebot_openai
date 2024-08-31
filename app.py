@@ -34,6 +34,8 @@ client = OpenAI(
 
 
 def GPT_response(text):
+    default_prompt = ",請用繁體中文回覆"
+    text = text + default_prompt
     completion = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
